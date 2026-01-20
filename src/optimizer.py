@@ -2,7 +2,7 @@
 Optimizer - Model matematis gradient descent.
 Fokus pada update rule dan iterasi optimisasi.
 """
-from src.gradient import numerical_gradient, analytical_gradient
+from .gradient import numerical_gradient, analytical_gradient
 
 
 def gradient_descent(f, x_init, learning_rate=0.01, max_iter=1000, tol=1e-6,
