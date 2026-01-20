@@ -67,3 +67,79 @@ def gradient_descent(f, x_init, learning_rate=0.01, max_iter=1000, tol=1e-6,
         x = x_new
 
     return x, history
+
+
+def momentum_gradient_descent(f, x_init, learning_rate=0.01, momentum=0.9,
+                               max_iter=1000, tol=1e-6, grad_func=None,
+                               use_numerical=False):
+    """
+    Momentum Gradient Descent.
+
+    Update rule:
+        v_{k+1} = β * v_k + ∇f(x_k)
+        x_{k+1} = x_k - α * v_{k+1}
+
+    Parameters:
+    -----------
+    f : callable
+        Fungsi objektif f: R^n -> R
+    x_init : list[float]
+        Titik awal x_0.
+    learning_rate : float
+        Learning rate α.
+    momentum : float
+        Momentum coefficient β (default 0.9).
+    max_iter : int
+        Jumlah iterasi maksimum.
+    tol : float
+        Toleransi konvergensi ||x_{k+1} - x_k|| < tol.
+    grad_func : callable, optional
+        Fungsi gradient analitik. Jika None, gunakan numerical.
+    use_numerical : bool
+        Paksa gunakan numerical gradient.
+
+    Returns:
+    --------
+    x : list[float]
+        Titik optimal.
+    history : dict
+        Riwayat optimisasi (x, f_values, gradients, velocities).
+    """
+    x = x_init.copy()
+    n = len(x)
+    v = [0.0] * n  # Velocity initialization
+
+    history = {
+        'x': [x.copy()],
+        'f_values': [f(x)],
+        'gradients': [],
+        'velocities': [v.copy()]
+    }
+
+    for k in range(max_iter):
+        # Hitung gradient (delegasi ke gradient.py)
+        if use_numerical or grad_func is None:
+            grad = numerical_gradient(f, x)
+        else:
+            grad = analytical_gradient(grad_func, x)
+
+        history['gradients'].append(grad.copy())
+
+        # Update velocity: v_{k+1} = β * v_k + ∇f(x_k)
+        v = [momentum * v[i] + grad[i] for i in range(n)]
+        history['velocities'].append(v.copy())
+
+        # Update position: x_{k+1} = x_k - α * v_{k+1}
+        x_new = [x[i] - learning_rate * v[i] for i in range(n)]
+
+        history['x'].append(x_new.copy())
+        history['f_values'].append(f(x_new))
+
+        # Cek konvergensi
+        diff = sum((x_new[i] - x[i]) ** 2 for i in range(n)) ** 0.5
+        if diff < tol:
+            break
+
+        x = x_new
+
+    return x, history
