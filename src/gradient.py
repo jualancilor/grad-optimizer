@@ -1,44 +1,112 @@
-import numpy as np
+"""
+Modul komputasi gradient.
+Berisi: numerical gradient, analytical gradient, gradient checking.
+"""
 
 
-def gradient_descent(gradient_func, x_init, learning_rate=0.01, max_iter=1000, tol=1e-6):
+def numerical_gradient(f, x, epsilon=1e-7):
     """
-    Vanilla Gradient Descent optimization.
+    Hitung gradient secara numerik menggunakan central difference.
+
+    ∂f/∂x_i ≈ (f(x + εe_i) - f(x - εe_i)) / (2ε)
 
     Parameters:
     -----------
-    gradient_func : callable
-        Fungsi yang menghitung gradient pada titik x.
-    x_init : np.ndarray
-        Titik awal optimisasi.
-    learning_rate : float
-        Learning rate (alpha).
-    max_iter : int
-        Jumlah iterasi maksimum.
-    tol : float
-        Toleransi untuk konvergensi.
+    f : callable
+        Fungsi objektif f: R^n -> R
+    x : list[float]
+        Titik evaluasi.
+    epsilon : float
+        Step size untuk finite difference.
 
     Returns:
     --------
-    x : np.ndarray
-        Titik optimal yang ditemukan.
-    history : list
-        Riwayat titik selama optimisasi.
+    grad : list[float]
+        Gradient numerik pada titik x.
     """
-    x = np.array(x_init, dtype=float)
-    history = [x.copy()]
+    n = len(x)
+    grad = [0.0] * n
 
-    for i in range(max_iter):
-        grad = gradient_func(x)
-        x_new = x - learning_rate * grad
-        history.append(x_new.copy())
+    for i in range(n):
+        x_plus = x.copy()
+        x_minus = x.copy()
+        x_plus[i] += epsilon
+        x_minus[i] -= epsilon
+        grad[i] = (f(x_plus) - f(x_minus)) / (2 * epsilon)
 
-        # Cek konvergensi
-        if np.linalg.norm(x_new - x) < tol:
-            break
-
-        x = x_new
-
-    return x, history
+    return grad
 
 
+def analytical_gradient(grad_func, x):
+    """
+    Wrapper untuk gradient analitik.
+
+    Parameters:
+    -----------
+    grad_func : callable
+        Fungsi gradient analitik ∇f: R^n -> R^n
+    x : list[float]
+        Titik evaluasi.
+
+    Returns:
+    --------
+    grad : list[float]
+        Gradient analitik pada titik x.
+    """
+    return grad_func(x)
+
+
+def gradient_check(f, grad_func, x, epsilon=1e-7, tolerance=1e-5):
+    """
+    Verifikasi gradient analitik dengan gradient numerik.
+
+    Parameters:
+    -----------
+    f : callable
+        Fungsi objektif f: R^n -> R
+    grad_func : callable
+        Fungsi gradient analitik ∇f: R^n -> R^n
+    x : list[float]
+        Titik evaluasi.
+    epsilon : float
+        Step size untuk numerical gradient.
+    tolerance : float
+        Toleransi error relatif.
+
+    Returns:
+    --------
+    is_correct : bool
+        True jika gradient analitik benar.
+    relative_error : float
+        Error relatif antara numerical dan analytical.
+    details : dict
+        Detail perbandingan per komponen.
+    """
+    grad_numerical = numerical_gradient(f, x, epsilon)
+    grad_analytical = analytical_gradient(grad_func, x)
+
+    # Hitung relative error: ||g_num - g_ana|| / (||g_num|| + ||g_ana||)
+    diff_norm = _norm([grad_numerical[i] - grad_analytical[i] for i in range(len(x))])
+    num_norm = _norm(grad_numerical)
+    ana_norm = _norm(grad_analytical)
+
+    denominator = num_norm + ana_norm
+    if denominator < 1e-15:
+        relative_error = 0.0
+    else:
+        relative_error = diff_norm / denominator
+
+    is_correct = relative_error < tolerance
+
+    details = {
+        'numerical': grad_numerical,
+        'analytical': grad_analytical,
+        'component_errors': [abs(grad_numerical[i] - grad_analytical[i]) for i in range(len(x))]
+    }
+
+    return is_correct, relative_error, details
+
+
+def _norm(v):
+    """Hitung L2 norm dari vektor."""
+    return sum(vi ** 2 for vi in v) ** 0.5
